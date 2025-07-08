@@ -1,5 +1,6 @@
 import os
 import sys
+import zipfile
 from PIL import Image, ImageDraw, ImageFont
 
 def crop_to_ratio(image, ratio):
@@ -66,10 +67,7 @@ def resize_and_save(image, width, height, dpi, output_path, base_name, format, r
     resized.save(file_path, dpi=(dpi,dpi))
     print("Saved:", file_path)
 
-def main(input_image_path, output_path, watermark_text=None):
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-
+def process_image(input_image_path, output_path, watermark_text):
     base_name = os.path.splitext(os.path.basename(input_image_path))[0]
     image = Image.open(input_image_path)
 
@@ -87,13 +85,37 @@ def main(input_image_path, output_path, watermark_text=None):
             for fmt in ["png", "jpg"]:
                 resize_and_save(image, size[0], size[1], dpi, output_path, base_name, fmt, ratio, watermark_text)
 
+def zip_output_folder(output_path):
+    zip_filename = os.path.join(output_path, "processed_images.zip")
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(output_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                zipf.write(file_path, os.path.relpath(file_path, output_path))
+
+def main(input_path, output_path, watermark_text=None):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    if os.path.isfile(input_path):
+        process_image(input_path, output_path, watermark_text)
+    elif os.path.isdir(input_path):
+        for filename in os.listdir(input_path):
+            print("Processing:", filename)
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', 'tiff', 'bmp', 'gif')):
+                file_path = os.path.join(input_path, filename)
+                process_image(file_path, output_path, watermark_text)
+
+    zip_output_folder(output_path)
+    print("All images processed and saved to:", output_path)
+
 if __name__ == "__main__":
     if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("Usage: python script.py <input_image_path> <output_folder> [watermark_text]")
+        print("Usage: python script.py <input_image_or_folder> <output_folder> [watermark_text]")
         sys.exit(1)
 
-    input_image_path = sys.argv[1]
+    input_path = sys.argv[1]
     output_path = sys.argv[2]
     watermark_text = sys.argv[3] if len(sys.argv) == 4 else None
     
-    main(input_image_path, output_path, watermark_text)
+    main(input_path, output_path, watermark_text)
