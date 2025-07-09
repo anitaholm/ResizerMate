@@ -1,6 +1,9 @@
 *.png
 *.jpg
-./output/
-.vscode/
-.venv/
+output
+input
+.vscode
+.venv
 *.zip
+__pycache__
+
